@@ -1,6 +1,7 @@
 import { StrictMode, useState } from "react"
 import { createRoot } from "react-dom/client"
 import App from "./App.jsx"
+import Appv2 from "./App-v2.jsx"
 import "./index.css"
 import StarRating from "./StarRating"
 
@@ -16,7 +17,8 @@ import StarRating from "./StarRating"
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
-    <App />
+    {/* <App /> */}
+    <Appv2 />
     {/* <StarRating
       maxRating={5}
       messages={["Terrible", "Bad", "Okay", "Good", "Amazing"]}
