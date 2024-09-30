@@ -58,7 +58,7 @@ export default function App() {
   const [movies, setMovies] = useState([])
   const [watched, setWatched] = useState([])
   const [isLoading, setIsLoading] = useState(false)
-  const [error, serErrors] = useState("")
+  const [errorMessage, serErrorsMessage] = useState("")
   const [selectedId, setSelectedId] = useState(null)
 
   // useEffect(() => {
@@ -92,10 +92,13 @@ export default function App() {
 
   useEffect(() => {
     async function fetchMovies() {
+      const controller = new AbortController()
       try {
         setIsLoading(true)
+        serErrorsMessage("")
         const res = await fetch(
-          `http://www.omdbapi.com/?i=tt3896198&apikey=${KEY}&s=${query}`
+          `http://www.omdbapi.com/?i=tt3896198&apikey=${KEY}&s=${query}`,
+          { signal: controller.signal }
         )
 
         if (!res.ok) {
@@ -108,8 +111,12 @@ export default function App() {
           throw new Error("Movie not found")
         }
         setMovies(data.Search)
+        serErrorsMessage("")
       } catch (error) {
-        setErrors(error.messages)
+        if (error.name !== "AbortError") {
+          console.log(error.messages)
+          serErrorsMessage(error.message)
+        }
       } finally {
         setIsLoading(false)
       }
@@ -118,7 +125,12 @@ export default function App() {
     if (!query.length) {
       setMovies([])
     }
+
+    handleCloseMovie()
     fetchMovies()
+    // return function () {
+    //   controller.abort()
+    // }
   }, [query])
 
   return (
@@ -130,10 +142,10 @@ export default function App() {
       <Main>
         {/* <Box>{isLoading ? <Loader /> : <MovieList movies={movies} />}</Box> */}
         {isLoading && <Loader />}
-        {!isLoading && !error && (
+        {!isLoading && !errorMessage && (
           <MovieList movies={movies} onSelectMovie={handleSelectMovie} />
         )}
-        {error && <ErrorMessage message={error} />}
+        {errorMessage && <ErrorMessage message={errorMessage} />}
         <Box>
           {selectedId ? (
             <MovieDetails
@@ -165,7 +177,7 @@ function ErrorMessage({ message }) {
   return (
     <p className="error">
       <span>⛔️</span>
-      <span>Movie not found</span>
+      <span>{message}</span>
     </p>
   )
 }
@@ -308,6 +320,20 @@ function MovieDetails({ selectedId, onCloseMovie, onAddWatched, watched }) {
   }
 
   useEffect(() => {
+    function callback(e) {
+      if (e.code === "Escape") {
+        onCloseMovie()
+      }
+    }
+
+    document.addEventListener("keydown", callback)
+
+    return function () {
+      document.removeEventListener("keydown", callback)
+    }
+  }, [onCloseMovie])
+
+  useEffect(() => {
     async function getMovieDetails() {
       setIsLoading(true)
       const res = await fetch(
@@ -319,6 +345,17 @@ function MovieDetails({ selectedId, onCloseMovie, onAddWatched, watched }) {
     }
     getMovieDetails()
   }, [selectedId])
+
+  useEffect(() => {
+    if (!title) return
+    document.title = `Movie | ${title}`
+
+    return function () {
+      document.title = "usePopcorn"
+      // console.log(`Clean up effect for movie ${title}`)
+    }
+  }, [title])
+
   return (
     <div className="details">
       {isLoading ? (
